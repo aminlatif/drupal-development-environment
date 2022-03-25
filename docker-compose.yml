@@ -1,0 +1,131 @@
+services:
+  mysql:
+    container_name: ${PROJECT_NAME}-mysql${PROJECT_ENVIRONMENT_SUFFIX}
+    image: ${PROJECT_NAME}/mysql:${PROJECT_MYSQL_VERSION:-latest}
+    build:
+      context: './mysql'
+      dockerfile: 'docker/Dockerfile'
+      args:
+        MYSQL_VERSION: ${PROJECT_MYSQL_VERSION:-'latest'}
+        TIMEZONE: ${PROJECT_TIMEZONE:-'UTC'}
+    environment:
+      MYSQL_VERSION: ${PROJECT_MYSQL_VERSION:-'latest'}
+      TIMEZONE: ${PROJECT_TIMEZONE:-'UTC'}
+      MYSQL_ROOT_PASSWORD: '${PROJECT_MYSQL_ROOT_PASS}'
+      MYSQL_DATABASE: '${PROJECT_DRUPAL_DATABASE_DATABASE}'
+      MYSQL_USER: '${PROJECT_DRUPAL_DATABASE_USER}'
+      MYSQL_PASSWORD: '${PROJECT_DRUPAL_DATABASE_PASS}'
+    ports:
+      - mode: ingress
+        protocol: tcp
+        published: ${PROJECT_MYSQL_PORT_EXTERNAL}
+        target: 3306
+    healthcheck:
+      test: [ "CMD", "mysqladmin", "ping", "-h", "localhost" ]
+      timeout: 20s
+      retries: 10
+    volumes:
+      - type: bind
+        source: ./mysql/data
+        target: /var/lib/mysql
+      - type: bind
+        source: ./mysql/files
+        target: /files
+
+  phpmyadmin:
+    container_name: ${PROJECT_NAME}-phpmyadmin${PROJECT_ENVIRONMENT_SUFFIX}
+    image: phpmyadmin/phpmyadmin:latest
+    ports:
+      - mode: ingress
+        protocol: tcp
+        published: ${PROJECT_PHPMYADMIN_PORT_EXTERNAL}
+        target: 80
+    environment:
+      PMA_HOST: ${PROJECT_PHPMYADMIN_DATABSE_HOST}
+      PMA_PORT: ${PROJECT_PHPMYADMIN_DATABSE_PORT}
+      PMA_USER: ${PROJECT_PHPMYADMIN_DATABSE_USER}
+      PMA_PASSWORD: ${PROJECT_PHPMYADMIN_DATABSE_PASS}
+      MAX_EXECUTION_TIME: ${PROJECT_PHPMYADMIN_MAX_EXECUTION_TIME}
+      MEMORY_LIMIT: ${PROJECT_PHPMYADMIN_MEMORY_LIMIT}
+      UPLOAD_LIMIT: ${PROJECT_PHPMYADMIN_UPLOAD_LIMIT}
+    depends_on:
+      mysql:
+        condition: service_healthy
+
+  drupal:
+    container_name: ${PROJECT_NAME}-drupal${PROJECT_ENVIRONMENT_SUFFIX}
+    image: ${PROJECT_NAME}/drupal:${PROJECT_DRUPAL_VERSION:-latest}
+    build:
+      context: './drupal'
+      dockerfile: 'docker/Dockerfile'
+      args:
+        PHP_VERSION: ${PROJECT_DRUPAL_PHP_VERSION:-'8.1.1'}
+        NODEJS_VERSION: ${PROJECT_DRUPAL_NODEJS_VERSION:-'16'}
+        ENVIRONMENT_MODE: ${PROJECT_ENVIRONMENT_MODE:-'production'}
+        ENVIRONMENT_SUFFIX: ${PROJECT_ENVIRONMENT_SUFFIX:-''}
+        USER_ID: ${PROJECT_DRUPAL_USER_ID:-'1000'}
+        GROUP_ID: ${PROJECT_DRUPAL_GROUP_ID:-'1000'}
+        DRUPAL_VERSION: ${PROJECT_DRUPAL_VERSION:-'latest'}
+        TIMEZONE: ${PROJECT_TIMEZONE:-'UTC'}
+    environment:
+      PHP_VERSION: ${PROJECT_DRUPAL_PHP_VERSION:-'8.1.1'}
+      NODEJS_VERSION: ${PROJECT_DRUPAL_NODEJS_VERSION:-'16'}
+      ENVIRONMENT_MODE: ${PROJECT_ENVIRONMENT_MODE:-production}
+      ENVIRONMENT_SUFFIX: ${PROJECT_ENVIRONMENT_SUFFIX:-''}
+      USER_ID: ${PROJECT_DRUPAL_USER_ID:-'1000'}
+      GROUP_ID: ${PROJECT_DRUPAL_GROUP_ID:-'1000'}
+      DRUPAL_VERSION: ${PROJECT_DRUPAL_VERSION:-'latest'}
+      TIMEZONE: ${PROJECT_TIMEZONE:-'UTC'}
+      SITE_URL: ${PROJECT_DRUPAL_URL}
+      HASH_SALT: ${PROJECT_DRUPAL_HASH_SALT}
+      UPDATE_FREE_ACCESS: ${PROJECT_DRUPAL_UPDATE_FREE_ACCESS}
+      DATABASE_HOST: ${PROJECT_DRUPAL_DATABASE_HOST}
+      DATABASE_PORT: ${PROJECT_DRUPAL_DATABASE_PORT}
+      DATABASE_DRIVER: ${PROJECT_DRUPAL_DATABASE_DRIVER}
+      DATABASE_NAME: ${PROJECT_DRUPAL_DATABASE_DATABASE}
+      DATABASE_USERNAME: ${PROJECT_DRUPAL_DATABASE_USER}
+      DATABASE_PASSWORD: ${PROJECT_DRUPAL_DATABASE_PASS}
+      DATABASE_PREFIX: ${PROJECT_DRUPAL_DATABASE_PREFIX}
+      CONFIG_SYNC_DIRECTORY: ${PROJECT_DRUPAL_CONFIG_SYNC_DIRECTORY}
+      FILE_PUBLIC_PATH: ${PROJECT_DRUPAL_FILE_PUBLIC_PATH}
+      FILE_PRIVATE_PATH: ${PROJECT_DRUPAL_FILE_PRIVATE_PATH}
+      FILE_TEMP_PATH: ${PROJECT_DRUPAL_FILE_TEMP_PATH}
+    ports:
+      - mode: ingress
+        protocol: tcp
+        published: ${PROJECT_DRUPAL_PORT_EXTERNAL}
+        target: 443
+    volumes:
+      - type: bind
+        source: ./drupal/extra
+        target: /var/www/extra
+      - type: bind
+        source: ./drupal/files
+        target: /var/www/files
+      - type: bind
+        source: ./drupal/log
+        target: /var/www/log
+      - type: bind
+        source: ./drupal/html
+        target: /var/www/html
+      - type: bind
+        source: ./drupal/config/nginx/nginx.conf
+        target: /var/www/nginx.conf
+      - type: bind
+        source: ./drupal/config/default.install-drupal.sh
+        target: /install-drupal.sh
+      - type: bind
+        source: ./drupal/config/default.uninstall-drupal.sh
+        target: /uninstall-drupal.sh
+      - type: bind
+        source: ./drupal/config/nginx/sites-available/default.conf
+        target: /etc/nginx/sites-available/default
+      - type: bind
+        source: ./drupal/config/nginx/snippets/php.conf
+        target: /etc/nginx/snippets/php.conf
+      - type: bind
+        source: ./drupal/config/php/conf.d/zz-custom.ini
+        target: /usr/local/etc/php/conf.d/zz-custom.ini
+    depends_on:
+      mysql:
+        condition: service_healthy

@@ -1,1 +1,16 @@
 .env
+
+/mysql/data
+/mysql/files
+
+/drupal/config/nginx/nginx.conf
+/drupal/config/nginx/sites-available/default.conf
+/drupal/config/nginx/snippets/php.conf
+/drupal/config/php/conf.d/zz-custom.ini
+/drupal/config/install-drupal.sh
+/drupal/config/uninstall-drupal.sh
+
+/drupal/extra
+/drupal/files
+/drupal/html
+/drupal/log
