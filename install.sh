@@ -56,3 +56,5 @@ mkdir -p ./drupal/files/profiles/custom
 mkdir -p ./drupal/files/themes/custom
 
 ./compose-up.sh
+
+./drupal/docker/install.sh
