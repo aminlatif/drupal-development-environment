@@ -1,0 +1,3 @@
+[submodule "extra/load-env-file"]
+	path = extra/load-env-file
+	url = https://github.com/aminlatif/load-env-file.git
